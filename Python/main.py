@@ -1,9 +1,9 @@
-from Python.classes.tcp_serv import TCPServer
-from Python.classes.state import State
-from Python.classes.GUI import LaserGui
-from Python.classes.png2ply import Png2PlyConverter
-from Python.classes.xml_pars import XMLHandler
-from Python.classes.proc3d import Proc3D
+from classes.tcp_serv import TCPServer
+from classes.state import State
+from classes.GUI import LaserGui
+from classes.png2ply import Png2PlyConverter
+from classes.xml_pars import XMLHandler
+from classes.proc3d import Proc3D
 import os
 import time
 import PySimpleGUI as Guihandle
@@ -11,6 +11,10 @@ import numpy as np
 
 SOURCE_DIR = os.path.join(os.path.dirname(__file__), 'png')
 TARGET_DIR = os.path.join(os.path.dirname(__file__), 'ply')
+if not os.path.isdir(SOURCE_DIR):
+    os.mkdir(SOURCE_DIR, 0o777)
+if not os.path.isdir(TARGET_DIR):
+    os.mkdir(TARGET_DIR, 0o777)
 SAVE_RGB = True
 SAVE_VERT = False
 
@@ -35,8 +39,13 @@ while True:
         case State.STANDBY:
             events, values = GUI.getinput()
             GUI.updatetask("IDLE")
-            # Delete all files in folder ply and png
             if events == 'Execute' and not (events == 'Abort' or events == Guihandle.WIN_CLOSED):
+               # for file in os.listdir(SOURCE_DIR):
+               #     if os.path.isfile(file):
+               #         os.remove(file)
+                for file in os.listdir(TARGET_DIR):
+                    if os.path.isfile(os.path.join(TARGET_DIR, file)):
+                        os.remove(os.path.join(TARGET_DIR, file))
                 server.sendData("state", "start")
                 state = State.PROG_SCANNING
                 quality_scan = 0
@@ -49,9 +58,8 @@ while True:
                 events, values = GUI.getinput()
                 i = 0
                 for file in os.listdir(SOURCE_DIR):
-                    events, values = GUI.getinput()
                     filename = os.fsdecode(file)
-                    if events != 'Abort' and (filename.endswith(".png") or filename.endswith(".PNG")):
+                    if filename.endswith(".png") or filename.endswith(".PNG"):
                         source_file = os.path.join(SOURCE_DIR, filename)
                         target_file = os.path.join(TARGET_DIR, f"pointcloud_{i}.ply")
                         converter = Png2PlyConverter(source_file, target_file)
@@ -69,9 +77,8 @@ while True:
                 events, values = GUI.getinput()
                 i = 0
                 for file in os.listdir(SOURCE_DIR):
-                    events, values = GUI.getinput()
                     filename = os.fsdecode(file)
-                    if events != 'Abort' and (filename.endswith(".png") or filename.endswith(".PNG")):
+                    if filename.endswith(".png") or filename.endswith(".PNG"):
                         source_file = os.path.join(SOURCE_DIR, filename)
                         target_file = os.path.join(TARGET_DIR, f"pointcloud_{i}.ply")
                         converter = Png2PlyConverter(source_file, target_file)
@@ -89,24 +96,35 @@ while True:
 
         case State.DONE_SCANNING:
             points_array = np.array([])
-            if scan_bool == True:
+            if scan_bool == True and events != 'Abort':
                 GUI.updatetask('SCAN DONE')
                 events, values = GUI.getinput()
                 scan_bool = False
-            elif quality_scan > 0:
+                ispointcloud = proc3d.load_points()
+                if ispointcloud is True and events != 'Abort':
+                    proc3d.process_points()
+                    points_array = proc3d.output_points()
+                    XML_handle.clearfile()
+                    XML_handle.writepoints(points_array, 'planar')
+                    state = State.PROG_LASER
+                else:
+                    print("No cloud available for processing")
+                    state = State.ABORT
+            elif quality_scan > 0 and events != 'Abort':
                 GUI.updatetask('QUALITY SCAN DONE')
                 events, values = GUI.getinput()
-            ispointcloud = proc3d.load_points()
-            if ispointcloud is True:
-                proc3d.process_points()
-                points_array = proc3d.output_points()
-            else:
-                print("No cloud available for processing")
-                state = State.ABORT
-            XML_handle.clearfile()
-            XML_handle.writepoints(points_array, 'planar')
-            state = State.PROG_LASER
-            time.sleep(1)
+                ispointcloud = proc3d.load_points()
+                if ispointcloud is True and events != 'Abort':
+                    proc3d.process_points()
+                    points_array = proc3d.output_points()
+                    XML_handle.clearfile()
+                    XML_handle.writepoints(points_array, 'planar')
+                    # missing if statement = are we done? if yes then return to idle
+                    # else:
+                    state = State.PROG_LASER
+                else:
+                    print("No cloud available for processing")
+                    state = State.ABORT
             if events == 'Abort':
                 state = State.ABORT
         case State.PROG_LASER:
@@ -116,7 +134,6 @@ while True:
             identifier, message = server.recieveData()
             if identifier == 'LASER' and message == 'DONE':
                 state = State.DONE_LASER
-                time.sleep(1)
             events, values = GUI.getinput()
             if events == 'Abort':
                 state = State.ABORT
@@ -125,7 +142,6 @@ while True:
             GUI.updatetask('LASER TREATMENT DONE')
             events, values = GUI.getinput()
             state = State.REORIENTING
-            time.sleep(1)
             if events == 'Abort:':
                 state = State.ABORT
 
@@ -133,14 +149,12 @@ while True:
             GUI.updatetask('REORIENTING')
             events, values = GUI.getinput()
             state = State.PROG_SCANNING
-            time.sleep(1)
             if events == 'Abort':
                 state = State.ABORT
 
         case State.ABORT:
             GUI.updatetask("ABORTING...")
             server.sendData('STATE', 'ABORT')
-            time.sleep(1)
             state = State.STANDBY
 
 
