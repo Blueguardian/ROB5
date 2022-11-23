@@ -45,8 +45,8 @@ class Proc3D:
 
                 Xmax_temp, Ymax_temp, Zmax = np.asarray(source.points).max(axis=0)
                 Xmin_temp, Ymin_temp, Zmin = np.asarray(source.points).min(axis=0)
-                source.translate((0, (Ymax - Ymin), 0))
-                Ymax = Ymax + (Ymax_temp - Ymin_temp)
+                source.translate(((Xmax - Xmin), 0, 0))
+                Xmax = Xmax + (Xmax_temp - Xmin_temp)
 
                 sourcepoints = np.asarray(source.points)
                 temp_points = np.append(temp_points, sourcepoints, axis=0)
