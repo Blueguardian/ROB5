@@ -9,16 +9,25 @@ class Proc3D:
 
     def __init__(self, path):
         self.__PATH = path
+        self.__OBJECT_TYPE = ""
         self.points = o3d.geometry.PointCloud()
         self.centerlinecloud = o3d.geometry.PointCloud()
 
     def load_points(self):
         """
         Load in points to the object from the .ply files provided in the folder
-        get the intensity of the points and remove those above threshold
+        get the intensity of the points and remove those above threshold.
+        Lastly it will determine whether the object is a planar object or not, while
+        it could determine the objects shape in general, this is not needed for
+        this project
         ::__PATH:: Internal path to .ply file directory
+        ::
         """
 
+
+        #  Load in all points from the .ply file and register them in the
+        #  provided instance fields after thresholding the points with
+        #  regard to the intensity of their colors.
         intensity_threshold = 0.4
         if os.path.isfile(os.path.join(self.__PATH, 'pointcloud_0.ply')):
             source = o3d.io.read_point_cloud(os.path.join(self.__PATH, 'pointcloud_0.ply'))
@@ -48,10 +57,20 @@ class Proc3D:
             self.points.colors = o3d.utility.Vector3dVector(temp_color)
             self.centerlinecloud = copy.deepcopy(self.points)
             self.centerlinecloud.points = o3d.utility.Vector3dVector(temp_cloud)
+
+            # Determine if the object is a plane or not
+            points, index = self.points.segment_plane(distance_threshold=0.1, ransac_n=3, num_iterations=1000)
+            if np.ma.size((np.asarray(self.points.points)), axis=0)/np.ma.size(np.asarray(self.points.points), axis=0) < np.ma.size(points, axis=0)/np.ma.size(np.asarray(self.points.points)):
+                self.__OBJECT_TYPE = "plane"
+
+            else:
+                self.__OBJECT_TYPE = "other"
             return True
         else:
             print("No points available")
             return False
+
+
 
 
     def process_points(self):
@@ -118,9 +137,9 @@ class Proc3D:
         self.laserpoints = np.array([[Xmin, Ymin, hight],
                                      [Xmin, Ymax, hight]])
 
-        for dx in np.arange(Ymin, Ymax, 0.03):
-            self.laserpoints = np.append(self.laserpoints, [[Xmin, dx, hight]], axis=0)
-            self.laserpoints = np.append(self.laserpoints, [[Xmax, dx, hight]], axis=0)
+        for dx in np.arange(Xmin, Xmax, 0.03):
+            self.laserpoints = np.append(self.laserpoints, [[dx, Ymin, hight]], axis=0)
+            self.laserpoints = np.append(self.laserpoints, [[dx, Ymax, hight]], axis=0)
 
         self.laserpoints = np.append(self.laserpoints, [[Xmax, Ymin, hight]], axis=0)
         self.laserpoints = np.append(self.laserpoints, [[Xmax, Ymax, hight]], axis=0)

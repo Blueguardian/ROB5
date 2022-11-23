@@ -65,7 +65,7 @@ while True:
                         converter = Png2PlyConverter(source_file, target_file)
                         converter.extract_data()
                         converter.write_ply(SAVE_RGB, SAVE_VERT)
-                        i = i + 1
+                        i += 1
                         continue
                     else:
                         continue
@@ -90,9 +90,10 @@ while True:
                 GUI.updatetask('CONVERSION DONE')
                 events, values = GUI.getinput()
                 state = State.DONE_SCANNING
-                quality_scan = quality_scan + 1
+                quality_scan += 1
             if events == 'Abort':
                 state = State.ABORT
+
 
         case State.DONE_SCANNING:
             points_array = np.array([])
@@ -155,6 +156,8 @@ while True:
         case State.ABORT:
             GUI.updatetask("ABORTING...")
             server.sendData('STATE', 'ABORT')
+            quality_scan = 0
+            scan_bool = False
             state = State.STANDBY
 
 
