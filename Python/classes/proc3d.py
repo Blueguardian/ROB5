@@ -60,7 +60,7 @@ class Proc3D:
 
             # Determine if the object is a plane or not
             points, index = self.points.segment_plane(distance_threshold=0.1, ransac_n=3, num_iterations=1000)
-            if np.ma.size((np.asarray(self.points.points)), axis=0)/np.ma.size(np.asarray(self.points.points), axis=0) < np.ma.size(points, axis=0)/np.ma.size(np.asarray(self.points.points)):
+            if np.ma.size((np.asarray(self.points.points)), axis=0)*0.7 < np.ma.size(points, axis=0):
                 self.__OBJECT_TYPE = "plane"
 
             else:
