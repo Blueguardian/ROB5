@@ -119,20 +119,26 @@ class Proc3D:
         colors = colors[Cbool]
         self.points.colors = o3d.utility.Vector3dVector(colors)
 
-        Xmax, Ymax, Zmax = np.asarray(self.points.points).max(axis=0)
-        Xmin, Ymin, Zmin = np.asarray(self.points.points).min(axis=0)
-        hight = np.average(np.asarray(self.points.points)[:, 2])
+        if points.shape[0] < 50000:
+            return False
+        else:
 
-        self.laserpoints = np.array([[Xmin, Ymin, hight],
+            Xmax, Ymax, Zmax = np.asarray(self.points.points).max(axis=0)
+            Xmin, Ymin, Zmin = np.asarray(self.points.points).min(axis=0)
+            hight = np.average(np.asarray(self.points.points)[:, 2])
+
+            self.laserpoints = np.array([[Xmin, Ymin, hight],
                                      [Xmin, Ymax, hight]])
 
-        for dx in np.arange(Xmin, Xmax, 0.03):
-            self.laserpoints = np.append(self.laserpoints, [[dx, Ymin, hight]], axis=0)
-            self.laserpoints = np.append(self.laserpoints, [[dx, Ymax, hight]], axis=0)
+            for dx in np.arange(Xmin, Xmax, 0.03):
+                self.laserpoints = np.append(self.laserpoints, [[dx, Ymin, hight]], axis=0)
+                self.laserpoints = np.append(self.laserpoints, [[dx, Ymax, hight]], axis=0)
 
-        self.laserpoints = np.append(self.laserpoints, [[Xmax, Ymin, hight]], axis=0)
-        self.laserpoints = np.append(self.laserpoints, [[Xmax, Ymax, hight]], axis=0)
-        # The points forming the corners of the rectangle
+            self.laserpoints = np.append(self.laserpoints, [[Xmax, Ymin, hight]], axis=0)
+            self.laserpoints = np.append(self.laserpoints, [[Xmax, Ymax, hight]], axis=0)
+            # The points forming the corners of the rectangle
+
+            return True
 
 
     def output_points(self):

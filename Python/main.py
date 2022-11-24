@@ -45,9 +45,9 @@ while True:
             if events == 'Execute' and not (events == 'Abort' or events == Guihandle.WIN_CLOSED):
                 GUI.update_text('_moveText_', 'Moving')
                 events, values = GUI.getinput()
-               # for file in os.listdir(SOURCE_DIR):
-               #     if os.path.isfile(file):
-               #         os.remove(file)
+                for file in os.listdir(SOURCE_DIR):
+                    if os.path.isfile(os.path.join(SOURCE_DIR, file)):
+                        os.remove(os.path.join(SOURCE_DIR, file))
                 for file in os.listdir(TARGET_DIR):
                     if os.path.isfile(os.path.join(TARGET_DIR, file)):
                         os.remove(os.path.join(TARGET_DIR, file))
@@ -112,11 +112,14 @@ while True:
                 scan_bool = True
                 ispointcloud = proc3d.load_points()
                 if ispointcloud is True and events != 'Abort':
-                    proc3d.process_points(proc3d.object_type)
-                    points_array = proc3d.output_points()
-                    XML_handle.clearfile()
-                    XML_handle.writepoints(points_array)
-                    state = State.PROG_LASER
+                    proc_bool = proc3d.process_points(proc3d.object_type)
+                    if proc_bool is True:
+                        points_array = proc3d.output_points()
+                        XML_handle.clearfile()
+                        XML_handle.writepoints(points_array)
+                        state = State.PROG_LASER
+                    else:
+                        print("Object does not need cleaning")
                 else:
                     print("No cloud available for processing")
                     state = State.ABORT
@@ -126,13 +129,18 @@ while True:
                 events, values = GUI.getinput()
                 ispointcloud = proc3d.load_points()
                 if ispointcloud is True and events != 'Abort':
-                    proc3d.process_points(proc3d.object_type)
-                    points_array = proc3d.output_points()
-                    XML_handle.clearfile()
-                    XML_handle.writepoints(points_array)
-                    # missing if statement = are we done? if yes then return to idle
-                    # else:
-                    state = State.PROG_LASER
+                    proc_bool = proc3d.process_points(proc3d.object_type)
+                    if proc_bool is True:
+                        points_array = proc3d.output_points()
+                        XML_handle.clearfile()
+                        XML_handle.writepoints(points_array)
+                        state = State.PROG_LASER
+                    else:
+                        GUI.update_text('_moveText_', 'Done')
+                        GUI.update_text('_scanText_', 'Done')
+                        GUI.update_text('_treatText_', 'Done')
+                        GUI.update_text('_rotateText_', 'Done')
+                        state = State.STANDBY
                 else:
                     print("No cloud available for processing")
                     state = State.ABORT
