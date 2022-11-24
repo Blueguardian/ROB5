@@ -40,7 +40,7 @@ while True:
             GUI.SetLED('_move_', 'red')
             GUI.SetLED('_scan_', 'red')
             GUI.SetLED('_treat_', 'red')
-            GUI.SetLED('_move_', 'red')
+            GUI.SetLED('_rotate_', 'red')
             event, value = GUI.getinput()
             if events == 'Execute' and not (events == 'Abort' or events == Guihandle.WIN_CLOSED):
                 GUI.update_text('_moveText_', 'Moving')
@@ -56,6 +56,7 @@ while True:
                 GUI.SetLED('_move_', 'green')
                 events, values = GUI.getinput()
                 quality_scan = 0
+                scan_bool = False
 
         case State.PROG_SCANNING:
             GUI.update_text('_scanText_', 'Scanning Object')
@@ -80,7 +81,6 @@ while True:
                 GUI.update_text('_scanText_', 'Conversion done')
                 events, values = GUI.getinput()
                 state = State.DONE_SCANNING
-                scan_bool = True
             elif identifier == 'QUALITY_SCAN' and message == 'DONE' and events != 'Abort':
                 GUI.update_text('_scanText_', 'Converting scans')
                 events, values = GUI.getinput()
@@ -105,7 +105,7 @@ while True:
 
         case State.DONE_SCANNING:
             points_array = np.array([])
-            if scan_bool == False and events != 'Abort':
+            if scan_bool is False and events != 'Abort':
                 GUI.SetLED('_scan_', 'green')
                 GUI.update_text('_scanText_', 'Scan done')
                 events, values = GUI.getinput()
