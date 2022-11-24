@@ -2,6 +2,7 @@ import open3d as o3d
 import os
 import numpy as np
 import copy
+import math
 
 class Proc3D:
 
@@ -9,9 +10,14 @@ class Proc3D:
 
     def __init__(self, path):
         self.__PATH = path
-        self.__OBJECT_TYPE = ""
+        self.object_type = ""
         self.points = o3d.geometry.PointCloud()
         self.centerlinecloud = o3d.geometry.PointCloud()
+
+    @classmethod
+    def euclidean_dist(cls, point1, point2):
+        dist = math.sqrt(math.pow(point1[0]-point2[0], 2)+math.pow(point1[1]-point2[1], 2)+math.pow(point1[2]-point2[2], 2))
+        return dist
 
     def load_points(self):
         """
@@ -59,27 +65,22 @@ class Proc3D:
             self.centerlinecloud.points = o3d.utility.Vector3dVector(temp_cloud)
 
             # Determine if the object is a plane or not
-            points, index = self.points.segment_plane(distance_threshold=0.1, ransac_n=3, num_iterations=1000)
-            if np.ma.size((np.asarray(self.points.points)), axis=0)*0.7 < np.ma.size(points, axis=0):
-                self.__OBJECT_TYPE = "plane"
-
+            points, indices = self.centerlinecloud.segment_plane(distance_threshold=3, ransac_n=3, num_iterations=100000)
+            if temp_cloud.shape[0]*0.7 < np.ma.size(indices, axis=0):
+                self.object_type = "plane"
             else:
-                self.__OBJECT_TYPE = "other"
+                self.object_type = "other"
             return True
         else:
             print("No points available")
             return False
 
-
-
-
-    def process_points(self):
+    def process_points(self, obj_type):
         """
         Process points to obtain the transformed points for the laser cell
 
         :return: Internal update of
         """
-
 
         self.laserpoints = np.array([])
         # euclidean clustering clustering
@@ -99,12 +100,6 @@ class Proc3D:
 
         # # concatenate biggest cluster into the original pointcloud
         centerlinePoints = centerlinePoints[labels == biggestLabel]
-        # colors = np.array([0, 0, 1], dtype=float)
-        # colors = np.tile(colors, (centerlinePoints.shape[0], 1))
-        # colorcheck = np.asarray(self.points.colors)
-        # # source.points = o3d.utility.Vector3dVector(np.concatenate((np.asarray(source.points), centerlinePoints + 0.1)))
-
-        # source.colors = o3d.utility.Vector3dVector(np.concatenate((np.asarray(source.colors), colors)))
 
         # expand area to contain the
         # first define the box containing the weld seam, find the max and min of x and y
@@ -116,8 +111,6 @@ class Proc3D:
         Cbool = (np.array(Xmax + dist2WideSeam > np.asarray(self.points.points)[:, 0], dtype=bool) & np.array(
             np.asarray(self.points.points)[:, 0] > Xmin - dist2WideSeam, dtype=bool))
 
-        o3d.visualization.draw_geometries([self.points])
-
         points = np.asarray(self.points.points)
         points = points[Cbool]
         self.points.points = o3d.utility.Vector3dVector(points)
@@ -126,13 +119,9 @@ class Proc3D:
         colors = colors[Cbool]
         self.points.colors = o3d.utility.Vector3dVector(colors)
 
-        o3d.visualization.draw_geometries([self.points])
-
         Xmax, Ymax, Zmax = np.asarray(self.points.points).max(axis=0)
         Xmin, Ymin, Zmin = np.asarray(self.points.points).min(axis=0)
         hight = np.average(np.asarray(self.points.points)[:, 2])
-
-        o3d.visualization.draw_geometries([self.points])
 
         self.laserpoints = np.array([[Xmin, Ymin, hight],
                                      [Xmin, Ymax, hight]])
@@ -144,11 +133,6 @@ class Proc3D:
         self.laserpoints = np.append(self.laserpoints, [[Xmax, Ymin, hight]], axis=0)
         self.laserpoints = np.append(self.laserpoints, [[Xmax, Ymax, hight]], axis=0)
         # The points forming the corners of the rectangle
-
-        test_cloud = o3d.geometry.PointCloud()
-        test_cloud.points = o3d.utility.Vector3dVector(self.laserpoints)
-        test_cloud.paint_uniform_color([0, 0, 0.5])
-        o3d.visualization.draw_geometries([self.points, test_cloud])
 
 
     def output_points(self):
