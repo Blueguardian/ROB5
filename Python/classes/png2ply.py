@@ -1,4 +1,4 @@
-from PIL import Image
+from PIL import Image, ImageFile
 import numpy as np
 from collections import defaultdict
 
@@ -14,8 +14,10 @@ class Png2PlyConverter():
         self.source_file = source_file
         self.target_file = target_file
 
+
     def extract_data(self):
         # Load png and metadata
+        ImageFile.LOAD_TRUNCATED_IMAGES = True
         source = Image.open(self.source_file)
         source.load()  # Needed for .png EXIF data
         metadata = source.info  # 'Dx', 'Dy', 'Dz', 'X0', 'Y0','Z0', 'CameraZ'

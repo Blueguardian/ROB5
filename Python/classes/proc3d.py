@@ -119,7 +119,7 @@ class Proc3D:
         colors = colors[Cbool]
         self.points.colors = o3d.utility.Vector3dVector(colors)
 
-        if points.shape[0] < 50000:
+        if points.shape[0] < 5000:
             return False
         else:
 
