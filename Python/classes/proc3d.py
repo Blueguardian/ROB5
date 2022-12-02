@@ -95,15 +95,14 @@ class Proc3D:
 
         intensity_threshold = 0.4
         if os.path.isfile(os.path.join(self.__PATH, 'pointcloud_0.ply')):
-            source = o3d.io.read_point_cloud(os.path.join(self.__PATH, 'pointcloud_0.ply'))
-            sourcepoints = np.asarray(source.points)
-            sourcepoints = self.numpylist_sliced_x_value(sourcepoints, 22.0)
-            temp_points = np.asarray(sourcepoints)
-            temp_color = np.asarray(source.colors)
-            intensity = np.asarray(source.colors)
-            temp_cloud = np.asarray(source.points)[intensity[:, 0] <= intensity_threshold]
-            Xmax, Ymax, Zmax = np.asarray(source.points).max(axis=0)
-            Xmin, Ymin, Zmin = np.asarray(source.points).min(axis=0)
+            # source = o3d.io.read_point_cloud(os.path.join(self.__PATH, 'pointcloud_0.ply'))
+            sourcepoints = np.array([])
+            temp_points = np.array([])
+            temp_color = np.array([])
+            intensity = np.array([])
+            temp_cloud = np.array([])
+            Xmax, Ymax, Zmax = 0, 0, 0
+            Xmin, Ymin, Zmin = 0, 0, 0
 
 
             for file in os.listdir(self.__PATH):
