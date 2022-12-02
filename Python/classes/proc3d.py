@@ -2,7 +2,7 @@ import open3d as o3d
 import os
 import numpy as np
 import copy
-import math
+from math import cos, sin, radians
 
 class Proc3D:
 
@@ -14,10 +14,57 @@ class Proc3D:
         self.points = o3d.geometry.PointCloud()
         self.centerlinecloud = o3d.geometry.PointCloud()
 
+
     @classmethod
-    def euclidean_dist(cls, point1, point2):
-        dist = math.sqrt(math.pow(point1[0]-point2[0], 2)+math.pow(point1[1]-point2[1], 2)+math.pow(point1[2]-point2[2], 2))
-        return dist
+    def compute_transform_fc_fd(cls, current_frame, desired_frame):
+        """
+        Get required transformation to get from current frame to desired frame
+        :param current_frame: numpy array, containing transformation matrix of the current frame
+        :param desired_frame: numpy array, containing transformation matrix of the desired frame
+        :return: numpy array, transformation matrix between the two
+        """
+        tr = current_frame.transpose() * desired_frame
+        return np.dot(np.linalg.inv(current_frame), desired_frame)
+
+    @classmethod
+    def populate_transform(cls, tx, ty, tz, alpha, beta, gamma):
+        """
+        Euler angles rotation on x (alpha), y (beta), z (gamma) and translation on x (tx), y (ty), z (tz)
+        Euler angles assume that each rotation is done based on the previous rotation unlike fixed angles which
+        rotate according to the initial frame
+        :param tx: Double, translation along x-axis
+        :param ty: Double, translation along y-axis
+        :param tz: Double, translation along z-axis
+        :param alpha: Rotation around x
+        :param beta: Rotation around y
+        :param gamma: Rotation around z
+        :return: numpy array, transformation matrix for the transform
+        """
+        alpha = radians(alpha)
+        beta = radians(beta)
+        gamma = radians(gamma)
+        return np.asarray([[cos(beta) * cos(gamma), -cos(beta) * sin(gamma), sin(beta), tx],
+                        [sin(alpha) * sin(beta) * cos(gamma) + cos(alpha) * sin(gamma),
+                        -sin(alpha) * sin(beta) * sin(gamma) + cos(alpha) * cos(gamma), -sin(alpha) * cos(beta),
+                        ty],
+                        [-cos(alpha) * sin(beta) * cos(gamma) + sin(alpha) * sin(gamma),
+                        cos(alpha) * sin(beta) * sin(gamma) + sin(alpha) * cos(gamma), cos(alpha) * cos(beta), tz],
+                        [0, 0, 0, 1]])
+
+    def interpolation3D(self, pt1, pt2, y):
+        x0 = pt1[0]
+        y0 = pt1[1]
+        z0 = pt1[2]
+        x1 = pt2[0]
+        y1 = pt2[1]
+        z1 = pt2[2]
+        # Calculate x given y, here the largest change in magnitude = y
+        x = x0 + (x1 - x0) * ((y - y0) / (y1 - y0))
+        # Calculate z given y
+        z = z0 + (z1 - z0) * ((y - y0) / (y1 - y0))
+        return x, z
+
+
 
     def load_points(self):
         """
@@ -27,13 +74,8 @@ class Proc3D:
         it could determine the objects shape in general, this is not needed for
         this project
         ::__PATH:: Internal path to .ply file directory
-        ::
         """
 
-
-        #  Load in all points from the .ply file and register them in the
-        #  provided instance fields after thresholding the points with
-        #  regard to the intensity of their colors.
         intensity_threshold = 0.4
         if os.path.isfile(os.path.join(self.__PATH, 'pointcloud_0.ply')):
             source = o3d.io.read_point_cloud(os.path.join(self.__PATH, 'pointcloud_0.ply'))
@@ -51,8 +93,8 @@ class Proc3D:
 
                 Xmax_temp, Ymax_temp, Zmax = np.asarray(source.points).max(axis=0)
                 Xmin_temp, Ymin_temp, Zmin = np.asarray(source.points).min(axis=0)
-                source.translate(((Xmax - Xmin), 0, 0))
-                Xmax = Xmax + (Xmax_temp - Xmin_temp)
+                source.translate(((Ymax - Ymin), 0, 0))
+                Ymax = Ymax + (Ymax_temp - Ymin_temp)
 
                 sourcepoints = np.asarray(source.points)
                 temp_points = np.append(temp_points, sourcepoints, axis=0)
@@ -78,7 +120,6 @@ class Proc3D:
     def process_points(self, obj_type):
         """
         Process points to obtain the transformed points for the laser cell
-
         :return: Internal update of
         """
 
@@ -118,25 +159,43 @@ class Proc3D:
         colors = np.asarray(self.points.colors)
         colors = colors[Cbool]
         self.points.colors = o3d.utility.Vector3dVector(colors)
-
-        if points.shape[0] < 5000:
+        if points.shape[0] < 500:
             return False
         else:
 
             Xmax, Ymax, Zmax = np.asarray(self.points.points).max(axis=0)
             Xmin, Ymin, Zmin = np.asarray(self.points.points).min(axis=0)
-            hight = np.average(np.asarray(self.points.points)[:, 2])
+            #hight = np.average(np.asarray(self.points.points)[:, 2])
+            height_1 = np.asarray(self.points.points)[1, 2]
+            ratio_ymin =  Zmin / height_1
+            hight = np.average(np.asarray(self.points.points)[:10, 2])
 
-            self.laserpoints = np.array([[Xmin, Ymin, hight],
-                                     [Xmin, Ymax, hight]])
+            inter_points_1 = np.array([])
+            inter_points_2 = np.array([])
+            if ratio_ymin > 0.8:
+                inter_points_1 = np.array([[Xmin, Ymin, Zmin], [Xmin, Ymax, Zmax]])
+                inter_points_2 = np.array([[Xmax, Ymin, Zmin], [Xmax, Ymax, Zmax]])
+                self.laserpoints = np.array([[Xmin, Ymin, Zmin], [Xmax, Ymin, Zmin]])
+            else:
+                inter_points_1 = np.array([[Xmin, Ymin, Zmax], [Xmin, Ymax, Zmin]])
+                inter_points_2 = np.array([[Xmax, Ymin, Zmax], [Xmax, Ymax, Zmin]])
+                self.laserpoints = np.array([[Xmin, Ymin, Zmax], [Xmax, Ymin, Zmax]])
 
-            for dx in np.arange(Xmin, Xmax, 0.03):
-                self.laserpoints = np.append(self.laserpoints, [[dx, Ymin, hight]], axis=0)
-                self.laserpoints = np.append(self.laserpoints, [[dx, Ymax, hight]], axis=0)
 
-            self.laserpoints = np.append(self.laserpoints, [[Xmax, Ymin, hight]], axis=0)
-            self.laserpoints = np.append(self.laserpoints, [[Xmax, Ymax, hight]], axis=0)
+
+            for dx in np.arange(Ymin, Ymax, 0.03):
+                i_x, i_z = self.interpolation3D(inter_points_1[0], inter_points_1[1], dx)
+                self.laserpoints = np.append(self.laserpoints, [[i_x, dx, i_z]], axis=0)
+                i_x, i_z = self.interpolation3D(inter_points_2[0], inter_points_2[1], dx)
+                self.laserpoints = np.append(self.laserpoints, [[i_x, dx, i_z]], axis=0)
+
+            self.laserpoints = np.append(self.laserpoints, [[Xmin, Ymax, Zmax]], axis=0)
+            self.laserpoints = np.append(self.laserpoints, [[Xmax, Ymax, Zmax]], axis=0)
             # The points forming the corners of the rectangle
+
+            random_name = o3d.geometry.PointCloud()
+            random_name.points = o3d.utility.Vector3dVector(self.laserpoints)
+            o3d.visualization.draw_geometries([self.points, random_name])
 
             return True
 

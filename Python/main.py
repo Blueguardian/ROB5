@@ -4,8 +4,8 @@ from classes.GUI import LaserGui
 from classes.png2ply import Png2PlyConverter
 from classes.xml_pars import XMLHandler
 from classes.proc3d import Proc3D
+from classes.kinematics import Kinematics
 import os
-import time
 import PySimpleGUI as Guihandle
 import numpy as np
 
@@ -22,6 +22,7 @@ XML_handle = XMLHandler()
 server = TCPServer()
 GUI = LaserGui()
 proc3d = Proc3D(TARGET_DIR)
+kinematics = Kinematics()
 state = State.STANDBY
 quality_scan = 0
 scan_bool = False
@@ -37,6 +38,9 @@ while True:
     match state:
         case State.STANDBY:
             GUI.update_text('_moveText_', 'Idle')
+            GUI.update_text('_scanText_', 'Idle')
+            GUI.update_text('_treatText_', 'Idle')
+            GUI.update_text('_rotateText_', 'Idle')
             GUI.SetLED('_move_', 'red')
             GUI.SetLED('_scan_', 'red')
             GUI.SetLED('_treat_', 'red')
@@ -115,6 +119,13 @@ while True:
                     proc_bool = proc3d.process_points(proc3d.object_type)
                     if proc_bool is True:
                         points_array = proc3d.output_points()
+                        input_transformations = []
+                        for pt in points_array:
+                            input_transformations.append(kinematics.populate_transform(pt))
+
+                        # Get object points relative to the galvo head
+                        transformed_pts = np.asarray(kinematics.get_pts_ref_to_galvo(input_transformations,
+                                                                          kinematics.T_moverg_tile))
                         XML_handle.clearfile()
                         XML_handle.writepoints(points_array)
                         state = State.PROG_LASER
