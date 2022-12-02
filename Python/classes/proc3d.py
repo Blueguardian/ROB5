@@ -64,7 +64,24 @@ class Proc3D:
         z = z0 + (z1 - z0) * ((y - y0) / (y1 - y0))
         return x, z
 
+    def numpylist_sliced_x_value(self, listlist, x_value):
 
+        listlist = copy.deepcopy(listlist)
+        indekser = []
+
+        for i in range(0, len(listlist)):
+
+            if x_value > 0:
+                if listlist[i, 0] > x_value:
+                    indekser.append(i)
+
+            if x_value < 0:
+                if listlist[i, 0] < x_value:
+                    indekser.append(i)
+
+        a = np.delete(listlist, indekser, axis=0)
+
+        return a
 
     def load_points(self):
         """
@@ -80,6 +97,7 @@ class Proc3D:
         if os.path.isfile(os.path.join(self.__PATH, 'pointcloud_0.ply')):
             source = o3d.io.read_point_cloud(os.path.join(self.__PATH, 'pointcloud_0.ply'))
             sourcepoints = np.asarray(source.points)
+            sourcepoints = self.numpylist_sliced_x_value(sourcepoints, 22.0)
             temp_points = np.asarray(sourcepoints)
             temp_color = np.asarray(source.colors)
             intensity = np.asarray(source.colors)
@@ -97,8 +115,10 @@ class Proc3D:
                 Ymax = Ymax + (Ymax_temp - Ymin_temp)
 
                 sourcepoints = np.asarray(source.points)
+                sourcepoints = self.numpylist_sliced_x_value(sourcepoints, 22.0)
                 temp_points = np.append(temp_points, sourcepoints, axis=0)
                 intensity = np.asarray(source.colors)
+
                 temp_cloud = np.append(temp_cloud, (np.asarray(source.points)[intensity[:, 0] <= intensity_threshold]), axis=0)
                 temp_color = np.append(temp_color, source.colors, axis=0)
             self.points.points = o3d.utility.Vector3dVector(temp_points)
@@ -156,9 +176,9 @@ class Proc3D:
         points = points[Cbool]
         self.points.points = o3d.utility.Vector3dVector(points)
 
-        colors = np.asarray(self.points.colors)
-        colors = colors[Cbool]
-        self.points.colors = o3d.utility.Vector3dVector(colors)
+        # colors = np.asarray(self.points.colors)
+        # colors = colors[Cbool]
+        # self.points.colors = o3d.utility.Vector3dVector(colors)
         if points.shape[0] < 500:
             return False
         else:
