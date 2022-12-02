@@ -97,16 +97,18 @@ class Proc3D:
         if os.path.isfile(os.path.join(self.__PATH, 'pointcloud_0.ply')):
             source = o3d.io.read_point_cloud(os.path.join(self.__PATH, 'pointcloud_0.ply'))
             sourcepoints = np.asarray(source.points)
-            sourcepoints = self.numpylist_sliced_x_value(sourcepoints, 22.0)
             temp_points = np.asarray(sourcepoints)
             temp_color = np.asarray(source.colors)
             intensity = np.asarray(source.colors)
             temp_cloud = np.asarray(source.points)[intensity[:, 0] <= intensity_threshold]
 
+            temp_points = self.numpylist_sliced_x_value(temp_points, 20.0)
             self.points.points = o3d.utility.Vector3dVector(temp_points)
             self.points.colors = o3d.utility.Vector3dVector(temp_color)
             self.centerlinecloud = copy.deepcopy(self.points)
             self.centerlinecloud.points = o3d.utility.Vector3dVector(temp_cloud)
+
+            o3d.visualization.draw_geometries([self.points])
 
             # Determine if the object is a plane or not
             points, indices = self.centerlinecloud.segment_plane(distance_threshold=3, ransac_n=3, num_iterations=100000)
