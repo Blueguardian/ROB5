@@ -163,8 +163,12 @@ class Proc3D:
                 i_x, i_z = self.interpolation3D(inter_points_2[0], inter_points_2[1], dx)
                 self.laserpoints = np.append(self.laserpoints, [[i_x, dx, i_z]], axis=0)
 
-            self.laserpoints = np.append(self.laserpoints, [[Xmin, Ymax, Zmax]], axis=0)
-            self.laserpoints = np.append(self.laserpoints, [[Xmax, Ymax, Zmax]], axis=0)
+            if ratio_ymin > 0.8:
+                self.laserpoints = np.array([[Xmin, Ymax, Zmin], [Xmax, Ymax, Zmin]])
+            else:
+                self.laserpoints = np.array([[Xmin, Ymax, Zmax], [Xmax, Ymax, Zmax]])
+            # self.laserpoints = np.append(self.laserpoints, [[Xmin, Ymax, Zmax]], axis=0)
+            # self.laserpoints = np.append(self.laserpoints, [[Xmax, Ymax, Zmax]], axis=0)
             # The points forming the corners of the rectangle
 
             random_name = o3d.geometry.PointCloud()
