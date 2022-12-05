@@ -8,48 +8,20 @@ class Proc3D:
 
     laserpoints = np.array([])
 
+
+
     def __init__(self, path):
         self.__PATH = path
         self.object_type = ""
         self.points = o3d.geometry.PointCloud()
         self.centerlinecloud = o3d.geometry.PointCloud()
 
-
-    @classmethod
-    def compute_transform_fc_fd(cls, current_frame, desired_frame):
-        """
-        Get required transformation to get from current frame to desired frame
-        :param current_frame: numpy array, containing transformation matrix of the current frame
-        :param desired_frame: numpy array, containing transformation matrix of the desired frame
-        :return: numpy array, transformation matrix between the two
-        """
-        tr = current_frame.transpose() * desired_frame
-        return np.dot(np.linalg.inv(current_frame), desired_frame)
-
-    @classmethod
-    def populate_transform(cls, tx, ty, tz, alpha, beta, gamma):
-        """
-        Euler angles rotation on x (alpha), y (beta), z (gamma) and translation on x (tx), y (ty), z (tz)
-        Euler angles assume that each rotation is done based on the previous rotation unlike fixed angles which
-        rotate according to the initial frame
-        :param tx: Double, translation along x-axis
-        :param ty: Double, translation along y-axis
-        :param tz: Double, translation along z-axis
-        :param alpha: Rotation around x
-        :param beta: Rotation around y
-        :param gamma: Rotation around z
-        :return: numpy array, transformation matrix for the transform
-        """
-        alpha = radians(alpha)
-        beta = radians(beta)
-        gamma = radians(gamma)
-        return np.asarray([[cos(beta) * cos(gamma), -cos(beta) * sin(gamma), sin(beta), tx],
-                        [sin(alpha) * sin(beta) * cos(gamma) + cos(alpha) * sin(gamma),
-                        -sin(alpha) * sin(beta) * sin(gamma) + cos(alpha) * cos(gamma), -sin(alpha) * cos(beta),
-                        ty],
-                        [-cos(alpha) * sin(beta) * cos(gamma) + sin(alpha) * sin(gamma),
-                        cos(alpha) * sin(beta) * sin(gamma) + sin(alpha) * cos(gamma), cos(alpha) * cos(beta), tz],
-                        [0, 0, 0, 1]])
+        self.intensity_threshold = 0.4 # [%] - Lower = Darker
+        self.bearing_offset = 20.0 # [mm]
+        self.plane_percentage = 0.7 # [%]
+        self.dist2WideSeam = 4 # [mm]
+        self.PointsRemainder = 500 # number of remaining points (threshold for acceptance/need for cleaning)
+        self.step_size = 0.55 # [mm] Length of steps between points
 
     def interpolation3D(self, pt1, pt2, y):
         x0 = pt1[0]
@@ -93,16 +65,15 @@ class Proc3D:
         ::__PATH:: Internal path to .ply file directory
         """
 
-        intensity_threshold = 0.4
         if os.path.isfile(os.path.join(self.__PATH, 'pointcloud_0.ply')):
             source = o3d.io.read_point_cloud(os.path.join(self.__PATH, 'pointcloud_0.ply'))
             sourcepoints = np.asarray(source.points)
             temp_points = np.asarray(sourcepoints)
             temp_color = np.asarray(source.colors)
             intensity = np.asarray(source.colors)
-            temp_cloud = np.asarray(source.points)[intensity[:, 0] <= intensity_threshold]
+            temp_cloud = np.asarray(source.points)[intensity[:, 0] <= self.intensity_threshold]
 
-            temp_points = self.numpylist_sliced_x_value(temp_points, 20.0)
+            temp_points = self.numpylist_sliced_x_value(temp_points, self.bearing_offset)
             self.points.points = o3d.utility.Vector3dVector(temp_points)
             self.points.colors = o3d.utility.Vector3dVector(temp_color)
             self.centerlinecloud = copy.deepcopy(self.points)
@@ -112,7 +83,7 @@ class Proc3D:
 
             # Determine if the object is a plane or not
             points, indices = self.centerlinecloud.segment_plane(distance_threshold=3, ransac_n=3, num_iterations=100000)
-            if temp_cloud.shape[0]*0.7 < np.ma.size(indices, axis=0):
+            if temp_cloud.shape[0]*self.plane_percentage < np.ma.size(indices, axis=0):
                 self.object_type = "plane"
             else:
                 self.object_type = "other"
@@ -152,9 +123,8 @@ class Proc3D:
         Xmin, Ymin, Zmin = centerlinePoints.min(axis=0)
 
         # define the width for the extra points away from the weld seam
-        dist2WideSeam = 4
-        Cbool = (np.array(Xmax + dist2WideSeam > np.asarray(self.points.points)[:, 0], dtype=bool) & np.array(
-            np.asarray(self.points.points)[:, 0] > Xmin - dist2WideSeam, dtype=bool))
+        Cbool = (np.array(Xmax + self.dist2WideSeam > np.asarray(self.points.points)[:, 0], dtype=bool) & np.array(
+            np.asarray(self.points.points)[:, 0] > Xmin - self.dist2WideSeam, dtype=bool))
 
         points = np.asarray(self.points.points)
         points = points[Cbool]
@@ -163,7 +133,7 @@ class Proc3D:
         # colors = np.asarray(self.points.colors)
         # colors = colors[Cbool]
         # self.points.colors = o3d.utility.Vector3dVector(colors)
-        if points.shape[0] < 500:
+        if points.shape[0] < self.PointsRemainder:
             return False
         else:
 
@@ -187,7 +157,7 @@ class Proc3D:
 
 
 
-            for dx in np.arange(Ymin, Ymax, 0.03):
+            for dx in np.arange(Ymin, Ymax, self.step_size):
                 i_x, i_z = self.interpolation3D(inter_points_1[0], inter_points_1[1], dx)
                 self.laserpoints = np.append(self.laserpoints, [[i_x, dx, i_z]], axis=0)
                 i_x, i_z = self.interpolation3D(inter_points_2[0], inter_points_2[1], dx)
