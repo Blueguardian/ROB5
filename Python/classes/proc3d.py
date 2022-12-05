@@ -164,11 +164,11 @@ class Proc3D:
                 self.laserpoints = np.append(self.laserpoints, [[i_x, dx, i_z]], axis=0)
 
             if ratio_ymin > 0.8:
-                self.laserpoints = np.array([[Xmin, Ymax, Zmin], [Xmax, Ymax, Zmin]])
+                self.laserpoints = np.append(self.laserpoints, [[Xmin, Ymin, Zmin], [Xmax, Ymin, Zmin]])
             else:
-                self.laserpoints = np.array([[Xmin, Ymax, Zmax], [Xmax, Ymax, Zmax]])
-            # self.laserpoints = np.append(self.laserpoints, [[Xmin, Ymax, Zmax]], axis=0)
-            # self.laserpoints = np.append(self.laserpoints, [[Xmax, Ymax, Zmax]], axis=0)
+                self.laserpoints = np.append(self.laserpoints, [[Xmin, Ymax, Zmax], [Xmax, Ymax, Zmax]])
+            #self.laserpoints = np.append(self.laserpoints, [[Xmin, Ymax, Zmax]], axis=0)
+            #self.laserpoints = np.append(self.laserpoints, [[Xmax, Ymax, Zmax]], axis=0)
             # The points forming the corners of the rectangle
 
             random_name = o3d.geometry.PointCloud()
