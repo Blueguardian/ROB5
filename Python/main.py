@@ -5,6 +5,7 @@ from classes.png2ply import Png2PlyConverter
 from classes.xml_pars import XMLHandler
 from classes.proc3d import Proc3D
 from classes.kinematics import Kinematics
+from time import sleep
 import os
 import PySimpleGUI as Guihandle
 import numpy as np
@@ -69,6 +70,7 @@ while True:
                 GUI.update_text('_moveText_', 'Idle')
                 GUI.update_text('_scanText_', 'Converting scans')
                 events, values = GUI.getinput()
+                sleep(1)
                 i = 0
                 for file in os.listdir(SOURCE_DIR):
                     filename = os.fsdecode(file)
@@ -89,6 +91,7 @@ while True:
                 GUI.update_text('_scanText_', 'Converting scans')
                 events, values = GUI.getinput()
                 i = 0
+                sleep(1)
                 for file in os.listdir(SOURCE_DIR):
                     filename = os.fsdecode(file)
                     if filename.endswith(".png") or filename.endswith(".PNG"):
