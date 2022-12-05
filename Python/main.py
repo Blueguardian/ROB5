@@ -127,7 +127,7 @@ while True:
                         transformed_pts = np.asarray(kinematics.get_pts_ref_to_galvo(input_transformations,
                                                                           kinematics.T_moverg_tile))
                         XML_handle.clearfile()
-                        XML_handle.writepoints(points_array)
+                        XML_handle.writepoints(transformed_pts)
                         state = State.PROG_LASER
                     else:
                         print("Object does not need cleaning")
