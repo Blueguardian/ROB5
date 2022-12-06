@@ -27,6 +27,7 @@ kinematics = Kinematics()
 state = State.STANDBY
 quality_scan = 0
 scan_bool = False
+send_once = True
 
 while True:
     events, values = GUI.getinput()
@@ -155,19 +156,22 @@ while True:
                         GUI.update_text('_scanText_', 'Done')
                         GUI.update_text('_treatText_', 'Done')
                         GUI.update_text('_rotateText_', 'Done')
-                        state = State.STANDBY
+                        state = State.DONE_LASER
                 else:
                     print("No cloud available for processing")
                     state = State.ABORT
             if events == 'Abort':
                 state = State.ABORT
         case State.PROG_LASER:
-            server.sendData('state', 'Laser')
+            if send_once is True:
+                server.sendData('state', 'Laser')
+                send_once = False
             identifier, message = server.recieveData()
             GUI.update_text('_treatText_', 'Ablating the Surface')
             events, values = GUI.getinput()
             if identifier == 'LASER' and message == 'DONE' and events != 'Abort':
                 state = State.DONE_LASER
+                send_once = True
             if events == 'Abort':
                 state = State.ABORT
 
@@ -175,7 +179,7 @@ while True:
             GUI.update_text('_treatText_', 'Laser treatment done')
             GUI.SetLED('_treat_', 'green')
             events, values = GUI.getinput()
-            state = State.REORIENTING
+            state = State.STANDBY
             if events == 'Abort:':
                 state = State.ABORT
 
