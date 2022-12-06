@@ -10,10 +10,12 @@ class TCPServer:
     __FORMAT = "utf-8"
     clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
+
     def __init__(self):
 
             self.clientSocket.bind((self.__HOST, self.__PORT))
             self.clientSocket.listen()
+            self.clientSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
             while True:
                 self.connection, self.address = self.clientSocket.accept()

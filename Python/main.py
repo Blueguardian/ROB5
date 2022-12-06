@@ -5,6 +5,7 @@ from classes.png2ply import Png2PlyConverter
 from classes.xml_pars import XMLHandler
 from classes.proc3d import Proc3D
 from classes.kinematics import Kinematics
+from time import sleep
 import os
 import PySimpleGUI as Guihandle
 import numpy as np
@@ -26,6 +27,7 @@ kinematics = Kinematics()
 state = State.STANDBY
 quality_scan = 0
 scan_bool = False
+send_once = True
 
 while True:
     events, values = GUI.getinput()
@@ -69,6 +71,7 @@ while True:
                 GUI.update_text('_moveText_', 'Idle')
                 GUI.update_text('_scanText_', 'Converting scans')
                 events, values = GUI.getinput()
+                sleep(1)
                 i = 0
                 for file in os.listdir(SOURCE_DIR):
                     filename = os.fsdecode(file)
@@ -89,6 +92,7 @@ while True:
                 GUI.update_text('_scanText_', 'Converting scans')
                 events, values = GUI.getinput()
                 i = 0
+                sleep(1)
                 for file in os.listdir(SOURCE_DIR):
                     filename = os.fsdecode(file)
                     if filename.endswith(".png") or filename.endswith(".PNG"):
@@ -127,7 +131,7 @@ while True:
                         transformed_pts = np.asarray(kinematics.get_pts_ref_to_galvo(input_transformations,
                                                                           kinematics.T_moverg_tile))
                         XML_handle.clearfile()
-                        XML_handle.writepoints(points_array)
+                        XML_handle.writepoints(transformed_pts)
                         state = State.PROG_LASER
                     else:
                         print("Object does not need cleaning")
@@ -152,19 +156,22 @@ while True:
                         GUI.update_text('_scanText_', 'Done')
                         GUI.update_text('_treatText_', 'Done')
                         GUI.update_text('_rotateText_', 'Done')
-                        state = State.STANDBY
+                        state = State.DONE_LASER
                 else:
                     print("No cloud available for processing")
                     state = State.ABORT
             if events == 'Abort':
                 state = State.ABORT
         case State.PROG_LASER:
-            server.sendData('state', 'Laser')
+            if send_once is True:
+                server.sendData('state', 'Laser')
+                send_once = False
             identifier, message = server.recieveData()
             GUI.update_text('_treatText_', 'Ablating the Surface')
             events, values = GUI.getinput()
             if identifier == 'LASER' and message == 'DONE' and events != 'Abort':
                 state = State.DONE_LASER
+                send_once = True
             if events == 'Abort':
                 state = State.ABORT
 
@@ -172,7 +179,7 @@ while True:
             GUI.update_text('_treatText_', 'Laser treatment done')
             GUI.SetLED('_treat_', 'green')
             events, values = GUI.getinput()
-            state = State.REORIENTING
+            state = State.STANDBY
             if events == 'Abort:':
                 state = State.ABORT
 
