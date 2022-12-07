@@ -148,8 +148,15 @@ while True:
                     proc_bool = proc3d.process_points(proc3d.object_type)
                     if proc_bool is True:
                         points_array = proc3d.output_points()
+                        input_transformations = []
+                        for pt in points_array:
+                            input_transformations.append(kinematics.populate_transform(pt))
+
+                        # Get object points relative to the galvo head
+                        transformed_pts = np.asarray(kinematics.get_pts_ref_to_galvo(input_transformations,
+                                                                          kinematics.T_moverg_tile))
                         XML_handle.clearfile()
-                        XML_handle.writepoints(points_array)
+                        XML_handle.writepoints(transformed_pts)
                         state = State.PROG_LASER
                     else:
                         GUI.update_text('_moveText_', 'Done')
