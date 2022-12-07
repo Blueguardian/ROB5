@@ -2,13 +2,10 @@ import open3d as o3d
 import os
 import numpy as np
 import copy
-from math import cos, sin, radians
 
 class Proc3D:
 
     laserpoints = np.array([])
-
-
 
     def __init__(self, path):
         self.__PATH = path
@@ -36,24 +33,24 @@ class Proc3D:
         z = z0 + (z1 - z0) * ((y - y0) / (y1 - y0))
         return x, z
 
-    def numpylist_sliced_x_value(self, listlist, x_value):
+    def numpylist_sliced_x_value(self, cloud, x_value):
 
-        listlist = copy.deepcopy(listlist)
-        indekser = []
+        cloud = copy.deepcopy(cloud)
+        indices = []
 
-        for i in range(0, len(listlist)):
+        for i in range(0, len(cloud)):
 
             if x_value > 0:
-                if listlist[i, 0] > x_value:
-                    indekser.append(i)
+                if cloud[i, 0] > x_value:
+                    indices.append(i)
 
             if x_value < 0:
-                if listlist[i, 0] < x_value:
-                    indekser.append(i)
+                if cloud[i, 0] < x_value:
+                    indices.append(i)
 
-        a = np.delete(listlist, indekser, axis=0)
+        sliced_cloud = np.delete(cloud, indices, axis=0)
 
-        return a
+        return sliced_cloud
 
     def load_points(self):
         """
@@ -67,23 +64,21 @@ class Proc3D:
 
         if os.path.isfile(os.path.join(self.__PATH, 'pointcloud_0.ply')):
             source = o3d.io.read_point_cloud(os.path.join(self.__PATH, 'pointcloud_0.ply'))
-            sourcepoints = np.asarray(source.points)
-            temp_points = np.asarray(sourcepoints)
-            temp_color = np.asarray(source.colors)
             intensity = np.asarray(source.colors)
-            temp_cloud = np.asarray(source.points)[intensity[:, 0] <= self.intensity_threshold]
 
-            temp_points = self.numpylist_sliced_x_value(temp_points, self.bearing_offset)
-            self.points.points = o3d.utility.Vector3dVector(temp_points)
-            self.points.colors = o3d.utility.Vector3dVector(temp_color)
+            # remove points with high intensity
+            temp_cloud = np.asarray(source.points)[intensity[:, 0] <= self.intensity_threshold]
+            # slice the fixture part
+            sliced_points = self.numpylist_sliced_x_value(temp_cloud, self.bearing_offset)
+
+            self.points.points = o3d.utility.Vector3dVector(sliced_points)
             self.centerlinecloud = copy.deepcopy(self.points)
-            self.centerlinecloud.points = o3d.utility.Vector3dVector(temp_cloud)
 
             o3d.visualization.draw_geometries([self.points])
 
             # Determine if the object is a plane or not
             points, indices = self.centerlinecloud.segment_plane(distance_threshold=3, ransac_n=3, num_iterations=100000)
-            if temp_cloud.shape[0]*self.plane_percentage < np.ma.size(indices, axis=0):
+            if sliced_points.shape[0]*self.plane_percentage < np.ma.size(indices, axis=0):
                 self.object_type = "plane"
             else:
                 self.object_type = "other"
@@ -95,11 +90,11 @@ class Proc3D:
     def process_points(self, obj_type):
         """
         Process points to obtain the transformed points for the laser cell
-        :return: Internal update of
+        :return: True if there are still points with low intensity, i.e. require cleaning
         """
 
         self.laserpoints = np.array([])
-        # euclidean clustering clustering
+        # euclidean clustering
         with o3d.utility.VerbosityContextManager(
                 o3d.utility.VerbosityLevel.Debug) as cm:
             labels = np.array(self.centerlinecloud.cluster_dbscan(eps=0.5, min_points=10, print_progress=True))
@@ -114,10 +109,10 @@ class Proc3D:
         max_label = labels.max()
         print(f"point cloud has {max_label + 1} clusters")
 
-        # # concatenate biggest cluster into the original pointcloud
+        # concatenate biggest cluster into the original pointcloud
         centerlinePoints = centerlinePoints[labels == biggestLabel]
+        self.points.points = o3d.utility.Vector3dVector(centerlinePoints)
 
-        # expand area to contain the
         # first define the box containing the weld seam, find the max and min of x and y
         Xmax, Ymax, Zmax = centerlinePoints.max(axis=0)
         Xmin, Ymin, Zmin = centerlinePoints.min(axis=0)
@@ -130,32 +125,25 @@ class Proc3D:
         points = points[Cbool]
         self.points.points = o3d.utility.Vector3dVector(points)
 
-        # colors = np.asarray(self.points.colors)
-        # colors = colors[Cbool]
-        # self.points.colors = o3d.utility.Vector3dVector(colors)
         if points.shape[0] < self.PointsRemainder:
             return False
         else:
 
             Xmax, Ymax, Zmax = np.asarray(self.points.points).max(axis=0)
             Xmin, Ymin, Zmin = np.asarray(self.points.points).min(axis=0)
-            #hight = np.average(np.asarray(self.points.points)[:, 2])
-            height_1 = np.asarray(self.points.points)[1, 2]
-            ratio_ymin =  Zmin / height_1
-            hight = np.average(np.asarray(self.points.points)[:10, 2])
+            height_ymax = np.asarray(self.points.points)[np.argmax(np.asarray(self.points.points)[0, 1])][2]
+            ratio_ymin =  Zmin / height_ymax
 
             inter_points_1 = np.array([])
             inter_points_2 = np.array([])
-            if ratio_ymin > 0.8:
-                inter_points_1 = np.array([[Xmin, Ymin, Zmin], [Xmin, Ymax, Zmax]])
-                inter_points_2 = np.array([[Xmax, Ymin, Zmin], [Xmax, Ymax, Zmax]])
-                self.laserpoints = np.array([[Xmin, Ymin, Zmin], [Xmax, Ymin, Zmin]])
-            else:
+            if ratio_ymin < 0.8:
                 inter_points_1 = np.array([[Xmin, Ymin, Zmax], [Xmin, Ymax, Zmin]])
                 inter_points_2 = np.array([[Xmax, Ymin, Zmax], [Xmax, Ymax, Zmin]])
+                self.laserpoints = np.array([[Xmin, Ymin, Zmin], [Xmax, Ymin, Zmin]])
+            else:
+                inter_points_1 = np.array([[Xmin, Ymin, Zmin], [Xmin, Ymax, Zmax]])
+                inter_points_2 = np.array([[Xmax, Ymin, Zmin], [Xmax, Ymax, Zmax]])
                 self.laserpoints = np.array([[Xmin, Ymin, Zmax], [Xmax, Ymin, Zmax]])
-
-
 
             for dx in np.arange(Ymin, Ymax, self.step_size):
                 i_x, i_z = self.interpolation3D(inter_points_1[0], inter_points_1[1], dx)
@@ -163,17 +151,15 @@ class Proc3D:
                 i_x, i_z = self.interpolation3D(inter_points_2[0], inter_points_2[1], dx)
                 self.laserpoints = np.append(self.laserpoints, [[i_x, dx, i_z]], axis=0)
 
-            if ratio_ymin > 0.8:
+            # The points forming the corners of the rectangle
+            if ratio_ymin < 0.8:
                 self.laserpoints = np.append(self.laserpoints, [[Xmin, Ymin, Zmin], [Xmax, Ymin, Zmin]], axis=0)
             else:
                 self.laserpoints = np.append(self.laserpoints, [[Xmin, Ymax, Zmax], [Xmax, Ymax, Zmax]], axis=0)
-            #self.laserpoints = np.append(self.laserpoints, [[Xmin, Ymax, Zmax]], axis=0)
-            #self.laserpoints = np.append(self.laserpoints, [[Xmax, Ymax, Zmax]], axis=0)
-            # The points forming the corners of the rectangle
 
-            random_name = o3d.geometry.PointCloud()
-            random_name.points = o3d.utility.Vector3dVector(self.laserpoints)
-            o3d.visualization.draw_geometries([self.points, random_name])
+            edge_points = o3d.geometry.PointCloud()
+            edge_points.points = o3d.utility.Vector3dVector(self.laserpoints)
+            o3d.visualization.draw_geometries([self.points, edge_points])
 
             return True
 

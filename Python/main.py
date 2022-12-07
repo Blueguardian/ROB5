@@ -51,9 +51,9 @@ while True:
             if events == 'Execute' and not (events == 'Abort' or events == Guihandle.WIN_CLOSED):
                 GUI.update_text('_moveText_', 'Moving')
                 events, values = GUI.getinput()
-                for file in os.listdir(SOURCE_DIR):
-                   if os.path.isfile(os.path.join(SOURCE_DIR, file)):
-                      os.remove(os.path.join(SOURCE_DIR, file))
+                # for file in os.listdir(SOURCE_DIR):
+                #    if os.path.isfile(os.path.join(SOURCE_DIR, file)):
+                #       os.remove(os.path.join(SOURCE_DIR, file))
                 for file in os.listdir(TARGET_DIR):
                    if os.path.isfile(os.path.join(TARGET_DIR, file)):
                       os.remove(os.path.join(TARGET_DIR, file))
