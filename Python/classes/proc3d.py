@@ -20,7 +20,7 @@ class Proc3D:
         self.bearing_offset = 20.0 # [mm]
         self.plane_percentage = 0.7 # [%]
         self.dist2WideSeam = 4 # [mm]
-        self.PointsRemainder = 500 # number of remaining points (threshold for acceptance/need for cleaning)
+        self.PointsRemainder = 100 # number of remaining points (threshold for acceptance/need for cleaning)
         self.step_size = 0.55 # [mm] Length of steps between points
 
     def interpolation3D(self, pt1, pt2, y):

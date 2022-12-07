@@ -32,7 +32,7 @@ send_once = True
 while True:
     events, values = GUI.getinput()
     identifier, message = server.recieveData()
-    if identifier != "DATA" and message != "INVALID":
+    if(identifier != 'DATA' and message != 'INVALID'):
         print(f"Identifier: {identifier}, message: {message}")
     if events == 'Abort' or events == Guihandle.WIN_CLOSED:
         state = State.ABORT
@@ -47,13 +47,13 @@ while True:
             GUI.SetLED('_scan_', 'red')
             GUI.SetLED('_treat_', 'red')
             GUI.SetLED('_rotate_', 'red')
-            event, value = GUI.getinput()
+            #events, value = GUI.getinput()
             if events == 'Execute' and not (events == 'Abort' or events == Guihandle.WIN_CLOSED):
                 GUI.update_text('_moveText_', 'Moving')
                 events, values = GUI.getinput()
-                 #for file in os.listdir(SOURCE_DIR):
-                 #   if os.path.isfile(os.path.join(SOURCE_DIR, file)):
-                 #       os.remove(os.path.join(SOURCE_DIR, file))
+                for file in os.listdir(SOURCE_DIR):
+                   if os.path.isfile(os.path.join(SOURCE_DIR, file)):
+                      os.remove(os.path.join(SOURCE_DIR, file))
                 for file in os.listdir(TARGET_DIR):
                    if os.path.isfile(os.path.join(TARGET_DIR, file)):
                       os.remove(os.path.join(TARGET_DIR, file))
@@ -162,11 +162,11 @@ while True:
                     state = State.ABORT
             if events == 'Abort':
                 state = State.ABORT
+
         case State.PROG_LASER:
             if send_once is True:
                 server.sendData('state', 'Laser')
                 send_once = False
-            identifier, message = server.recieveData()
             GUI.update_text('_treatText_', 'Ablating the Surface')
             events, values = GUI.getinput()
             if identifier == 'LASER' and message == 'DONE' and events != 'Abort':
@@ -179,7 +179,20 @@ while True:
             GUI.update_text('_treatText_', 'Laser treatment done')
             GUI.SetLED('_treat_', 'green')
             events, values = GUI.getinput()
-            state = State.STANDBY
+            server.sendData('SCAN', 'ACCEPTED')
+            quality_scan = 0
+            scan_bool = False
+            state = State.DONE_PROCESS
+            if events == 'Abort:':
+                state = State.ABORT
+
+        case State.DONE_PROCESS:
+            if identifier == 'PROCESS' and message == 'DONE' and events != 'Abort':
+                GUI.update_text('_rotateText_', 'Process done')
+                GUI.SetLED('_rotate_', 'green')
+                events, values = GUI.getinput()
+                sleep(2)
+                state = State.STANDBY
             if events == 'Abort:':
                 state = State.ABORT
 
