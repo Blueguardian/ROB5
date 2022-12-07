@@ -6,6 +6,7 @@ class State(Enum):
     DONE_SCANNING = 2
     PROG_LASER = 3
     DONE_LASER = 4
+    DONE_PROCESS = 5
     TRANSITION = 80
     REORIENTING = 81
     ABORT = 82
