@@ -231,9 +231,9 @@ class Proc3D:
             xcoord = square_xcoord + circ_xcoord
             ycoord = square_ycoord + circ_ycoord
 
-            self.laserpoints = np.asarray([[xcoord[0], ycoord[0]]], axis=0)
+            self.laserpoints = np.asarray([[xcoord[0], ycoord[0], 0]])
             for i in range(1, len(xcoord)-1):
-                self.laserpoints = np.append(self.laserpoints, [[xcoord[i], ycoord[i]]], axis=0)
+                self.laserpoints = np.append(self.laserpoints, [[xcoord[i], ycoord[i], 0]], axis=0)
 
 
             # combine points from both paths for visualizing
