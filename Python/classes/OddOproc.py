@@ -114,7 +114,7 @@ class OddOProc:
             # appends the transformed point to the new list over points without the previously appended 1.
             transformatedPoints.append([multiplication[0], multiplication[1], multiplication[2]])
             Xcoord_list.append(multiplication[0])
-            Zcoord_list.append(multiplication[2])
+            Zcoord_list.append(multiplication[1])
 
         return Xcoord_list, Zcoord_list, transformatedPoints
 
