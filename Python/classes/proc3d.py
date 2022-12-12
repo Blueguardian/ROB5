@@ -2,7 +2,7 @@ import open3d as o3d
 import os
 import numpy as np
 import copy
-from OddOproc import OddOProc
+from classes.OddOproc import OddOProc
 
 class Proc3D:
 
