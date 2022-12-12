@@ -66,7 +66,7 @@ class Proc3D:
 
         if os.path.isfile(os.path.join(self.__PATH, 'pointcloud_0.ply')):
             self.source = o3d.io.read_point_cloud(os.path.join(self.__PATH, 'pointcloud_0.ply'))
-            self.points = np.array([])
+            self.points = o3d.geometry.PointCloud()
 
 
             o3d.visualization.draw_geometries([self.source])
