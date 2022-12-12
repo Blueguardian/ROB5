@@ -17,7 +17,7 @@ class Proc3D:
 
         self.intensity_threshold = 0.4 # [%] - Lower = Darker
         self.bearing_offset = 20.0 # [mm]
-        self.plane_percentage = 0.7 # [%]
+        self.plane_percentage = 0.9 # [%]
         self.dist2WideSeam = 4 # [mm]
         self.PointsRemainder = 100 # number of remaining points (threshold for acceptance/need for cleaning)
         self.step_size = 0.55 # [mm] Length of steps between points
@@ -65,13 +65,36 @@ class Proc3D:
         """
 
         if os.path.isfile(os.path.join(self.__PATH, 'pointcloud_0.ply')):
-            source = o3d.io.read_point_cloud(os.path.join(self.__PATH, 'pointcloud_0.ply'))
-            intensity = np.asarray(source.colors)
+            self.source = o3d.io.read_point_cloud(os.path.join(self.__PATH, 'pointcloud_0.ply'))
+            self.points = np.array([])
 
+
+            o3d.visualization.draw_geometries([self.points])
+
+            # Determine if the object is a plane or not
+            points, indices = self.source.segment_plane(distance_threshold=3, ransac_n=3, num_iterations=100000)
+            if self.source.shape[0]*self.plane_percentage < np.ma.size(indices, axis=0):
+                self.object_type = "plane"
+            else:
+                self.object_type = "other"
+            return True
+        else:
+            print("No points available")
+            return False
+
+    def process_points(self, target_mesh):
+        """
+        Process points to obtain the transformed points for the laser cell
+        :return: True if there are still points with low intensity, i.e. require cleaning
+        """
+        if self.object_type == 'plane':
+            self.laserpoints = np.array([])
+
+            intensity = np.asarray(self.source.colors)
             # slice the fixture part
             # sliced_points = self.numpylist_sliced_x_value(temp_cloud, self.bearing_offset)
-            sliced_points = np.asarray(source.points)[np.asarray(source.points)[:, 0] < self.bearing_offset]
-            sliced_colors = np.asarray(source.colors)[np.asarray(source.points)[:, 0] < self.bearing_offset]
+            sliced_points = np.asarray(self.source.points)[np.asarray(self.source.points)[:, 0] < self.bearing_offset]
+            sliced_colors = np.asarray(self.source.colors)[np.asarray(self.source.points)[:, 0] < self.bearing_offset]
 
             ThreshedPoints = sliced_points[sliced_colors[:, 0] <= self.intensity_threshold]
             Threshedcolors = sliced_colors[sliced_colors[:, 0] <= self.intensity_threshold]
@@ -81,27 +104,6 @@ class Proc3D:
             # remove points with high intensity
 
             self.centerlinecloud = copy.deepcopy(self.points)
-
-            o3d.visualization.draw_geometries([self.points])
-
-            # Determine if the object is a plane or not
-            points, indices = self.centerlinecloud.segment_plane(distance_threshold=3, ransac_n=3, num_iterations=100000)
-            if sliced_points.shape[0]*self.plane_percentage < np.ma.size(indices, axis=0):
-                self.object_type = "plane"
-            else:
-                self.object_type = "other"
-            return True
-        else:
-            print("No points available")
-            return False
-
-    def process_points(self, obj_type):
-        """
-        Process points to obtain the transformed points for the laser cell
-        :return: True if there are still points with low intensity, i.e. require cleaning
-        """
-        if self.object_type == 'plane':
-            self.laserpoints = np.array([])
             # euclidean clustering
             with o3d.utility.VerbosityContextManager(
                     o3d.utility.VerbosityLevel.Debug) as cm:
@@ -172,20 +174,20 @@ class Proc3D:
                 return True
         else:
             # load in source file and remove the bearing from the point cloud
-            source = o3d.io.read_point_cloud("Give_Pointcloud_0025_Neutral.ply")
-            source.points = o3d.utility.Vector3dVector(self.numpylist_sliced_x_value(np.asarray(source.points), 30))
+            # source = o3d.io.read_point_cloud("Give_Pointcloud_0025_Neutral.ply")
+            # source.points = o3d.utility.Vector3dVector(self.numpylist_sliced_x_value(np.asarray(source.points), 30))
 
             # load in CAD file as target
-            CAD_mesh = o3d.io.read_triangle_mesh("NEW.ply")
+            CAD_mesh = o3d.io.read_triangle_mesh(target_mesh)
             # sample same amount of points from mesh as the source cloud contains
-            target = CAD_mesh.sample_points_uniformly(number_of_points=len(source.points))
+            target = CAD_mesh.sample_points_uniformly(number_of_points=len(self.source.points))
             # are able to remove the information about the inner parts of the tube from the point cloud
             target = self.ObjHandle.camera_circle(target)
 
             # downsample based on the size of bounding box(voxel) - points laying inside this bounding box is combined
             # into a single point. Downsample to reduce the amount of processing power needed in further operations.
             voxel_size = 1
-            source_down, source_fpfh = self.ObjHandle.preprocess_point_cloud(source, voxel_size)
+            source_down, source_fpfh = self.ObjHandle.preprocess_point_cloud(self.source, voxel_size)
             target_down, target_fpfh = self.ObjHandle.preprocess_point_cloud(target, voxel_size)
 
             # PERFORMING GLOBAL REGISTRATION AS INITIALIZATION
@@ -198,7 +200,7 @@ class Proc3D:
             reg_p2p = self.ObjHandle.ICP_pp(source_down, target_down, result_ransac.transformation)
 
             # draw alignment
-            self.ObjHandle.draw_registration_result(source, target, reg_p2p.transformation)
+            self.ObjHandle.draw_registration_result(self.source, target, reg_p2p.transformation)
 
             # invert the transformation to get the transformation needed to the linescanner frame
             trans_to_scanner = np.linalg.inv(reg_p2p.transformation)
@@ -236,7 +238,7 @@ class Proc3D:
             cloud.paint_uniform_color([1, 0.706, 0])
 
             # visualize scan and paths created
-            o3d.visualization.draw_geometries([source, cloud])
+            o3d.visualization.draw_geometries([self.source, cloud])
 
             return True
 

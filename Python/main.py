@@ -12,6 +12,7 @@ import numpy as np
 
 SOURCE_DIR = os.path.join(os.path.dirname(__file__), 'png')
 TARGET_DIR = os.path.join(os.path.dirname(__file__), 'ply')
+MESH_DIR = os.path.join(os.path.dirname(__file__), 'meshes', 'obj1_mesh.ply')
 if not os.path.isdir(SOURCE_DIR):
     os.mkdir(SOURCE_DIR, 0o777)
 if not os.path.isdir(TARGET_DIR):
@@ -120,7 +121,7 @@ while True:
                 scan_bool = True
                 ispointcloud = proc3d.load_points()
                 if ispointcloud is True and events != 'Abort':
-                    proc_bool = proc3d.process_points(proc3d.object_type)
+                    proc_bool = proc3d.process_points(MESH_DIR)
                     if proc_bool is True:
                         points_array = proc3d.output_points()
                         input_transformations = []
