@@ -191,13 +191,18 @@ class Proc3D:
             target_down, target_fpfh = self.ObjHandle.preprocess_point_cloud(target, voxel_size)
 
             # PERFORMING GLOBAL REGISTRATION AS INITIALIZATION
-            result_ransac = self.ObjHandle.execute_global_registration(source_down, target_down,
-                                                           source_fpfh, target_fpfh,
-                                                           voxel_size)
+            # result_ransac = self.ObjHandle.execute_global_registration(source_down, target_down,
+                                                           # source_fpfh, target_fpfh,
+                                                           # voxel_size)
 
+            trans_init = [[-9.92852089e-01, -6.00717020e-02, 1.03131562e-01, 5.23269696e+01],
+                          [1.01553346e-01, 2.87661094e-02, 9.94414113e-01, 3.09085579e+00],
+                          [-6.27028421e-02, 9.97779485e-01, -2.24600095e-02, -4.16825389e+00],
+                          [0.00000000e+00, 0.00000000e+00, 0.00000000e+00, 1.00000000e+00]]
             # PERFORMING LOCAL REGISTRATION -> Local registration rely on the rough alignment from global registration
             # as initialization
-            reg_p2p = self.ObjHandle.ICP_pp(source_down, target_down, result_ransac.transformation)
+            # reg_p2p = self.ObjHandle.ICP_pp(source_down, target_down, result_ransac.transformation)
+            reg_p2p = self.ObjHandle.ICP_pp(source_down, target_down, trans_init)
 
             # draw alignment
             self.ObjHandle.draw_registration_result(self.source, target, reg_p2p.transformation)
