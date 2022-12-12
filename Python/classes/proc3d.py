@@ -68,12 +68,18 @@ class Proc3D:
             source = o3d.io.read_point_cloud(os.path.join(self.__PATH, 'pointcloud_0.ply'))
             intensity = np.asarray(source.colors)
 
-            # remove points with high intensity
-            temp_cloud = np.asarray(source.points)[intensity[:, 0] <= self.intensity_threshold]
             # slice the fixture part
-            sliced_points = self.numpylist_sliced_x_value(temp_cloud, self.bearing_offset)
+            # sliced_points = self.numpylist_sliced_x_value(temp_cloud, self.bearing_offset)
+            sliced_points = np.asarray(source.points)[np.asarray(source.points)[:, 0] > self.bearing_offset]
+            sliced_colors = np.asarray(source.colors)[np.asarray(source.points)[:, 0] > self.bearing_offset]
 
-            self.points.points = o3d.utility.Vector3dVector(sliced_points)
+            ThreshedPoints = sliced_points[sliced_colors[:, 0] <= self.intensity_threshold]
+            Threshedcolors = sliced_colors[sliced_colors[:, 0] <= self.intensity_threshold]
+
+            self.points.points = o3d.utility.Vector3dVector(ThreshedPoints)
+            self.points.colors = o3d.utility.Vector3dVector(Threshedcolors)
+            # remove points with high intensity
+
             self.centerlinecloud = copy.deepcopy(self.points)
 
             o3d.visualization.draw_geometries([self.points])
