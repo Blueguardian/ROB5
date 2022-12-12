@@ -70,8 +70,8 @@ class Proc3D:
 
             # slice the fixture part
             # sliced_points = self.numpylist_sliced_x_value(temp_cloud, self.bearing_offset)
-            sliced_points = np.asarray(source.points)[np.asarray(source.points)[:, 0] > self.bearing_offset]
-            sliced_colors = np.asarray(source.colors)[np.asarray(source.points)[:, 0] > self.bearing_offset]
+            sliced_points = np.asarray(source.points)[np.asarray(source.points)[:, 0] < self.bearing_offset]
+            sliced_colors = np.asarray(source.colors)[np.asarray(source.points)[:, 0] < self.bearing_offset]
 
             ThreshedPoints = sliced_points[sliced_colors[:, 0] <= self.intensity_threshold]
             Threshedcolors = sliced_colors[sliced_colors[:, 0] <= self.intensity_threshold]
