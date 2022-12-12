@@ -69,11 +69,12 @@ class Proc3D:
             self.points = np.array([])
 
 
-            o3d.visualization.draw_geometries([self.points])
+            o3d.visualization.draw_geometries([self.source])
+            segment = np.asarray(self.source.points)
 
             # Determine if the object is a plane or not
             points, indices = self.source.segment_plane(distance_threshold=3, ransac_n=3, num_iterations=100000)
-            if self.source.shape[0]*self.plane_percentage < np.ma.size(indices, axis=0):
+            if segment.shape[0]*self.plane_percentage < np.ma.size(indices, axis=0):
                 self.object_type = "plane"
             else:
                 self.object_type = "other"
