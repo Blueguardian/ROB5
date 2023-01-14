@@ -5,13 +5,14 @@ class TCPServer:
     # If you pass an empty string, the server will accept connections on all available IPv4 interfaces.
     # HOST = "127.0.0.1"  # Standard loopback interface address (localhost)
     __HOST = ""
-    __PORT = 6666  # Port to listen on (non-privileged ports are > 1023)
+    __PORT = 15567  # Port to listen on (non-privileged ports are > 1023)
     __SIZE = 512
     __FORMAT = "utf-8"
     clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-    def __init__(self):
 
+    def __init__(self):
+            self.clientSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.clientSocket.bind((self.__HOST, self.__PORT))
             self.clientSocket.listen()
 
@@ -30,13 +31,10 @@ class TCPServer:
         try:
             data = self.connection.recv(self.__SIZE)
         except socket.error:
-            return 'DATA', 'INVALID'
-        except socket.EWOULDBLOCK:
-            return 'DATA', 'INVALID'
+
+            return 'SOCKET', 'TIMEOUT'
         else:
-            if str(data.decode(self.__FORMAT)) == "b'\\x00":
-                return 'DATA', 'INVALID'
-            elif str(data.decode(self.__FORMAT)) == "" or str(data.decode(self.__FORMAT)) == '':
+            if str(data.decode(self.__FORMAT)) == "" or str(data.decode(self.__FORMAT)) == '':
                 return 'DATA', 'INVALID'
             else:
                 temp = data.decode(self.__FORMAT)
